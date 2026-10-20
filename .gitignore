@@ -1,0 +1,54 @@
+# ----- Data (never in git; reproducible from Kaggle + pipelines/) -----
+data/raw/
+data/legacy/
+data/sample/*
+!data/sample/.gitkeep
+*.db
+*.sqlite
+*.parquet
+
+# ----- Legacy model artifacts (source for the JSON bundle; bundles go to Supabase Storage) -----
+models/legacy/
+*.pkl
+*.joblib
+
+# ----- Secrets -----
+.env*
+!.env.example
+
+*.pem
+*.key
+supabase/.temp/
+supabase/.branches/
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# ----- Node / Next.js / Vercel -----
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# ----- Editors / OS -----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ----- Claude Code local config and session logs -----
+.claude/settings.local.json
+docs/chats/
+.kilo/
+
+# ----- Logs -----
+*.log
