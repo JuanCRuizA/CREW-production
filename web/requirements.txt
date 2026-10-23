@@ -1,0 +1,4 @@
+# versions will be defined on phase 0.5 after the Vercel test
+xgboost-cpu
+numpy
+supabase

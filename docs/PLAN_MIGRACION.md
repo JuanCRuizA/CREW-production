@@ -220,7 +220,7 @@ models/crew-v{n}/
 - [x] Esqueleto del monorepo, copia de lo estrictamente necesario (sección 3), `.gitignore`, `.env.example`, `README.md` y `CLAUDE.md`
 - [x] Definir la identidad de git del repo (`user.name` / `user.email` locales) y la cuenta de GitHub con la que se hace push
 - [x] Primeros commits en `main`
-- [ ] Separar dependencias: `web/requirements.txt` (ligero) y `pipelines/requirements.txt` (completo)
+- [x] Separar dependencias: `web/requirements.txt` (ligero) y `pipelines/requirements.txt` (completo)
 - [ ] Hacer push y Crear la rama `dev`
 - [ ] **Proteger `main`** en GitHub (Settings → Rules → Rulesets): exigir PR; el check de CI se agrega en la Fase 2, cuando exista ci.yml. Nota: en GitHub gratis requiere que el repo sea **público**
 - **Hecho cuando**: el repo tiene la estructura en `main` y `dev`, `git status` está limpio y `main` está protegida.
