@@ -1,0 +1,332 @@
+{
+  "model_metadata": {
+    "model_name": "XGBoost Credit Risk Model",
+    "model_version": "1.0",
+    "algorithm": "XGBClassifier (Gradient Boosted Decision Trees)",
+    "framework": "xgboost",
+    "training_date": "2026-04-02",
+    "owner": "Credit Risk Analytics Team",
+    "project": "CREWS - Credit Risk Early Warning System"
+  },
+  "dataset": {
+    "source": "Home Credit Group (Kaggle)",
+    "total_records": 307511,
+    "default_rate": 0.0807,
+    "feature_count": 216,
+    "train_size": 246008,
+    "test_size": 61503,
+    "train_test_split": 0.8,
+    "stratified": true
+  },
+  "hyperparameters": {
+    "objective": "binary:logistic",
+    "eval_metric": "auc",
+    "max_depth": 5,
+    "learning_rate": 0.1,
+    "n_estimators": 200,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "scale_pos_weight": 11.39,
+    "random_state": 42
+  },
+  "performance": {
+    "auc_roc": 0.7778,
+    "gini": 0.5556,
+    "brier_score": 0.0668,
+    "brier_skill_score": 0.1003,
+    "cross_validation": {
+      "n_folds": 5,
+      "mean_auc": 0.7755,
+      "std_auc": 0.0035,
+      "fold_scores": [
+        0.7744,
+        0.7792,
+        0.7719,
+        0.7801,
+        0.7721
+      ]
+    }
+  },
+  "thresholds": {
+    "statistical_optimal": 0.5157,
+    "business_optimal": 0.79,
+    "default": 0.5
+  },
+  "risk_bands": {
+    "Low": {
+      "min_probability": 0.0,
+      "max_probability": 0.3,
+      "action": "Standard monitoring"
+    },
+    "Medium": {
+      "min_probability": 0.3,
+      "max_probability": 0.5,
+      "action": "Enhanced monitoring"
+    },
+    "High": {
+      "min_probability": 0.5,
+      "max_probability": 0.7,
+      "action": "Active review required"
+    },
+    "Critical": {
+      "min_probability": 0.7,
+      "max_probability": 1.0,
+      "action": "Immediate intervention"
+    }
+  },
+  "top_features": [
+    {
+      "feature": "EXT_SOURCE_MEAN",
+      "importance": 0.103139,
+      "category": "External Scores"
+    },
+    {
+      "feature": "DOCUMENTS_PROVIDED_RATIO",
+      "importance": 0.017441,
+      "category": "Other Application"
+    },
+    {
+      "feature": "NAME_EDUCATION_TYPE",
+      "importance": 0.017411,
+      "category": "Other Application"
+    },
+    {
+      "feature": "CODE_GENDER",
+      "importance": 0.013395,
+      "category": "Other Application"
+    },
+    {
+      "feature": "EXT_SCORE_x_AGE",
+      "importance": 0.012519,
+      "category": "Other Application"
+    },
+    {
+      "feature": "PREV_REFUSAL_RATE",
+      "importance": 0.012016,
+      "category": "Previous Applications"
+    },
+    {
+      "feature": "CREDIT_TO_GOODS",
+      "importance": 0.011276,
+      "category": "Engineered Ratios"
+    },
+    {
+      "feature": "EMPLOYMENT_YEARS",
+      "importance": 0.00997,
+      "category": "Time Features"
+    },
+    {
+      "feature": "EXT_SOURCE_MAX",
+      "importance": 0.008989,
+      "category": "External Scores"
+    },
+    {
+      "feature": "BUREAU_DEBT_TO_CREDIT_RATIO",
+      "importance": 0.008906,
+      "category": "Bureau (External Credit)"
+    },
+    {
+      "feature": "REG_CITY_NOT_LIVE_CITY",
+      "importance": 0.008819,
+      "category": "Other Application"
+    },
+    {
+      "feature": "DEF_60_CNT_SOCIAL_CIRCLE",
+      "importance": 0.008792,
+      "category": "Other Application"
+    },
+    {
+      "feature": "EXT_SOURCE_PRODUCT",
+      "importance": 0.008697,
+      "category": "External Scores"
+    },
+    {
+      "feature": "FLAG_DOCUMENT_3",
+      "importance": 0.008654,
+      "category": "Flags"
+    },
+    {
+      "feature": "BUREAU_TYPE_MICROLOAN",
+      "importance": 0.008606,
+      "category": "Bureau (External Credit)"
+    },
+    {
+      "feature": "PREV_AMT_DOWN_PAYMENT_SUM",
+      "importance": 0.008597,
+      "category": "Previous Applications"
+    },
+    {
+      "feature": "ANNUITY_TO_CREDIT",
+      "importance": 0.008435,
+      "category": "Engineered Ratios"
+    },
+    {
+      "feature": "PREV_CNT_PAYMENT_MEAN",
+      "importance": 0.008168,
+      "category": "Previous Applications"
+    },
+    {
+      "feature": "OWN_CAR_AGE",
+      "importance": 0.007806,
+      "category": "Other Application"
+    },
+    {
+      "feature": "EXT_SOURCE_MIN",
+      "importance": 0.007793,
+      "category": "External Scores"
+    }
+  ],
+  "psi_baseline": {
+    "train_vs_test": 0.0002,
+    "interpretation": "Stable",
+    "thresholds": {
+      "stable": 0.1,
+      "moderate": 0.25
+    },
+    "bin_details": [
+      {
+        "bin_range": "0.0-0.1",
+        "train_pct": 72.08,
+        "test_pct": 72.29,
+        "psi_contribution": 7e-06
+      },
+      {
+        "bin_range": "0.1-0.2",
+        "train_pct": 16.02,
+        "test_pct": 16.01,
+        "psi_contribution": 0.0
+      },
+      {
+        "bin_range": "0.2-0.3",
+        "train_pct": 7.53,
+        "test_pct": 7.28,
+        "psi_contribution": 8.2e-05
+      },
+      {
+        "bin_range": "0.3-0.4",
+        "train_pct": 2.29,
+        "test_pct": 2.34,
+        "psi_contribution": 1e-05
+      },
+      {
+        "bin_range": "0.4-0.5",
+        "train_pct": 1.0,
+        "test_pct": 1.05,
+        "psi_contribution": 2.1e-05
+      },
+      {
+        "bin_range": "0.5-0.6",
+        "train_pct": 0.65,
+        "test_pct": 0.64,
+        "psi_contribution": 2e-06
+      },
+      {
+        "bin_range": "0.6-0.7",
+        "train_pct": 0.33,
+        "test_pct": 0.3,
+        "psi_contribution": 3e-05
+      },
+      {
+        "bin_range": "0.7-0.8",
+        "train_pct": 0.05,
+        "test_pct": 0.05,
+        "psi_contribution": 3e-06
+      },
+      {
+        "bin_range": "0.8-0.9",
+        "train_pct": 0.04,
+        "test_pct": 0.03,
+        "psi_contribution": 1.4e-05
+      },
+      {
+        "bin_range": "0.9-1.0",
+        "train_pct": 0.01,
+        "test_pct": 0.01,
+        "psi_contribution": 1.3e-05
+      }
+    ]
+  },
+  "calibration": {
+    "method": "Isotonic Regression (post-hoc, preserves AUC)",
+    "brier_score": 0.0668,
+    "decile_table": [
+      {
+        "decile": 1,
+        "count": 6460,
+        "mean_predicted_pd": 0.000684,
+        "actual_default_rate": 0.009752,
+        "pred_vs_actual_ratio": 0.07
+      },
+      {
+        "decile": 2,
+        "count": 6157,
+        "mean_predicted_pd": 0.004238,
+        "actual_default_rate": 0.018191,
+        "pred_vs_actual_ratio": 0.233
+      },
+      {
+        "decile": 3,
+        "count": 6967,
+        "mean_predicted_pd": 0.009629,
+        "actual_default_rate": 0.027415,
+        "pred_vs_actual_ratio": 0.351
+      },
+      {
+        "decile": 4,
+        "count": 5791,
+        "mean_predicted_pd": 0.018992,
+        "actual_default_rate": 0.030047,
+        "pred_vs_actual_ratio": 0.632
+      },
+      {
+        "decile": 5,
+        "count": 5454,
+        "mean_predicted_pd": 0.03127,
+        "actual_default_rate": 0.040887,
+        "pred_vs_actual_ratio": 0.765
+      },
+      {
+        "decile": 6,
+        "count": 6817,
+        "mean_predicted_pd": 0.050613,
+        "actual_default_rate": 0.061611,
+        "pred_vs_actual_ratio": 0.822
+      },
+      {
+        "decile": 7,
+        "count": 5553,
+        "mean_predicted_pd": 0.074468,
+        "actual_default_rate": 0.079056,
+        "pred_vs_actual_ratio": 0.942
+      },
+      {
+        "decile": 8,
+        "count": 6197,
+        "mean_predicted_pd": 0.112481,
+        "actual_default_rate": 0.097144,
+        "pred_vs_actual_ratio": 1.158
+      },
+      {
+        "decile": 9,
+        "count": 6399,
+        "mean_predicted_pd": 0.176865,
+        "actual_default_rate": 0.157056,
+        "pred_vs_actual_ratio": 1.126
+      },
+      {
+        "decile": 10,
+        "count": 5708,
+        "mean_predicted_pd": 0.344623,
+        "actual_default_rate": 0.304135,
+        "pred_vs_actual_ratio": 1.133
+      }
+    ]
+  },
+  "known_limitations": [
+    "EXT_SOURCE_WEIGHTED feature has ~64% NaN rate; model performance degrades when external scores are unavailable",
+    "Trained on historical data; does not reflect current economic conditions without ongoing drift monitoring",
+    "Class imbalance (8.07% default rate) may cause underperformance on edge cases near decision boundary",
+    "Some features (e.g., bureau history) may not be available at application time for new-to-credit customers",
+    "CODE_GENDER included as predictor; must monitor for disparate impact (ECOA / fair lending compliance)"
+  ]
+}
