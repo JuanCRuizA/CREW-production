@@ -226,10 +226,10 @@ models/crew-v{n}/
 - **Hecho cuando**: el repo tiene la estructura en `main` y `dev`, `git status` está limpio y `main` está protegida.
 
 ### Fase 0.5 — Prueba de concepto de Vercel Python (1–2 h) ⚠ riesgo principal
-- [ ] `export_model_bundle.py` genera el bundle JSON y se valida la paridad contra los `.pkl`
+- [x] `export_model_bundle.py` genera el bundle JSON y se valida la paridad contra los `.pkl`
 - [ ] `web/api/score.py` mínimo (sin base de datos): recibe features y devuelve PD, tier y top drivers SHAP
 - [ ] Deploy a Vercel (preview) y medición: tamaño del bundle de la función, cold start y latencia en caliente
-- **Hecho cuando**: `curl -X POST https://<preview>.vercel.app/api/score` devuelve una PD idéntica a la de Streamlit para el mismo cliente.
+- **Hecho cuando**: `curl -X POST https://<preview>.vercel.app/api/score` devuelve, para un cliente de prueba, la misma PD cruda y calibrada que el pipeline de los `.pkl` (diferencia máxima < 1e-6, mismo cliente que en la prueba de paridad), y la medición del paso 3 (tamaño del bundle de la función, cold start y latencia en caliente) queda registrada.
 - **Si falla** (tamaño o tiempo): el scoring se mueve a FastAPI en Render (plan B) y el resto del plan no cambia.
 
 ### Fase 1 — Supabase: esquema, seguridad y datos (6–10 h)
