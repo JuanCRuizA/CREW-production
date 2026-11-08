@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Clients{% endblock %}
+{% block content %}
+<h1>Clients</h1>
+<p class="muted">{{ total }} clients in the sample. Page {{ page }} of {{ n_pages }}.</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">SK_ID_CURR</th>
+        <th scope="col" class="num">pd_raw</th>
+        <th scope="col" class="num">pd_calibrated</th>
+        <th scope="col">Flags</th>
+        <th scope="col">Model</th>
+        <th scope="col">Scored at</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td><a href="{{ url_for('views.client', sk_id_curr=row.sk_id_curr) }}">{{ row.sk_id_curr }}</a></td>
+        {% if row.scored_at is none %}
+        <td class="num muted">n/a</td>
+        <td class="num muted">n/a</td>
+        <td></td>
+        <td></td>
+        <td class="muted">not scored</td>
+        {% else %}
+        <td class="num">{{ "%.4f"|format(row.pd_raw) }}</td>
+        <td class="num">{{ "%.4f"|format(row.pd_calibrated) }}</td>
+        <td>
+          {% if row.above_statistical %}<span class="badge badge-stat">above statistical</span>{% endif %}
+          {% if row.above_business %}<span class="badge badge-biz">above business</span>{% endif %}
+        </td>
+        <td><code>{{ row.model_version }}</code></td>
+        <td>{{ row.scored_at }}</td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">No clients loaded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<nav class="pager" aria-label="Pagination">
+  {% if page > 1 %}<a href="{{ url_for('views.clients', page=page - 1) }}">Previous</a>{% endif %}
+  {% if page < n_pages %}<a href="{{ url_for('views.clients', page=page + 1) }}">Next</a>{% endif %}
+</nav>
+{% endblock %}
