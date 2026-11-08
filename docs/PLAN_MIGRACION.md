@@ -227,10 +227,10 @@ models/crew-v{n}/
 
 ### Fase 0.5 — Prueba de concepto de Vercel Python (1–2 h) ⚠ riesgo principal
 - [x] `export_model_bundle.py` genera el bundle JSON y se valida la paridad contra los `.pkl`
-- [ ] `web/api/score.py` mínimo (sin base de datos): recibe features y devuelve PD, tier y top drivers SHAP
+- [x] `web/api/score.py` mínimo (sin base de datos): recibe features y devuelve `pd_raw`, `pd_calibrated`, banderas de umbral y top drivers SHAP (sin tier: ver `docs/HALLAZGO_NAN_CALIBRACION.md`)
 - [ ] Deploy a Vercel (preview) y medición: tamaño del bundle de la función, cold start y latencia en caliente
-- **Hecho cuando**: `curl -X POST https://<preview>.vercel.app/api/score` devuelve, para un cliente de prueba, la misma PD cruda y calibrada que el pipeline de los `.pkl` (diferencia máxima < 1e-6, mismo cliente que en la prueba de paridad), y la medición del paso 3 (tamaño del bundle de la función, cold start y latencia en caliente) queda registrada.
-- **Si falla** (tamaño o tiempo): el scoring se mueve a FastAPI en Render (plan B) y el resto del plan no cambia.
+- **Hecho cuando**: curl -X POST -H "Content-Type: application/json" --data @cliente_prueba.json https://<preview>.vercel.app/api/score devuelve, para un cliente de prueba, la misma PD cruda y calibrada que el pipeline de los `.pkl` (diferencia máxima < 1e-6, mismo cliente que en la prueba de paridad), y la medición del paso 3 (tamaño del bundle de la función, cold start y latencia en caliente) queda registrada.
+- **Si falla** (tamaño o tiempo): el scoring se mueve a FastAPI en Render (plan B) y el resto del plan no cambia. - **Deuda técnica**: `web/api/score.py` usa el formato `class handler(BaseHTTPRequestHandler)` de Vercel, que puede quedar obsoleto; revisar al llegar a la Fase 3.
 
 ### Fase 1 — Supabase: esquema, seguridad y datos (6–10 h)
 - [ ] Crear el proyecto `crew` en supabase.com, en la región más cercana a la de las funciones de Vercel

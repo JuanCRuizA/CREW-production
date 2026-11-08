@@ -55,6 +55,7 @@ All code, table/column names, comments and portfolio deliverables are in **Engli
 
 ## Model bundle invariants (Phase 0.5)
 - Bundle: `models/crew-v1/` is committed and read by the API. Only `pipelines/export_model_bundle.py` generates it (refuses to overwrite without `--force`); never hand-edit it.
+- Bundle files are written with LF only, never CRLF (`.gitattributes` marks `models/crew-v1` and `web/api/_crew/bundle` as `-text`; `bundle_sha256` depends on the bytes; a test fails on any `\r`).
 - Feature order comes from `feature_names.pkl` (216 features), never recomputed.
 - Label encoders are never refit: store `classes_` in order (the code is the position).
 - Legacy `.pkl` files load with `joblib.load`.
@@ -64,7 +65,8 @@ All code, table/column names, comments and portfolio deliverables are in **Engli
 - Thresholds are on the raw PD scale (`scale_pos_weight` inflates raw PD; raw 0.79 is about 0.30 calibrated).
 - `categorical_modes` and `whatif_base_medians` (calculator only) and `model_card.json` (documentation) are never used by scoring.
 - Parity target: bundle vs legacy `.pkl` pipeline on the same features, tolerance 1e-6. The legacy `loan_predictions` table is NOT a parity reference (unknown provenance, 0.053 residual on a client with no nulls).
-- Open decisions (ask the user): raw vs calibrated PD in the API, tier scheme.
+- Decided: raw or calibrated PD in the API: both, as two fields (`pd_raw`, `pd_calibrated`) with no headline `pd`. Tier scheme: no tier for now (only the `above_statistical` / `above_business` flags on the raw scale).
+- Open decision (ask the user): crew-v2: NaN policy aligned with training (native NaN, inf to NaN, categorical null to the class "nan"). crew-v1 is not presented as a PD. Decide by the end of step 3 at the latest, and before Phase 1 uses the PD. Evidence: docs/HALLAZGO_NAN_CALIBRACION.md
 
 ## Session Hygiene
 At the end of every session, when the user says "close", "wrap up", or pastes a closing instruction, save a session summary to `docs/chats/YYYY-MM-DD_topic.md` (git-ignored) with these sections: Session title, Date, Status, Deliverables, Key decisions, Next steps, Context for next session.
