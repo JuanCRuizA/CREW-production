@@ -8,7 +8,7 @@ import pathlib
 import shutil
 
 import pytest
-from _crew.bundle import SCORING_FILES, BundleError, load_bundle
+from crew.bundle import SCORING_FILES, BundleError, load_bundle
 
 SOURCE = pathlib.Path(__file__).resolve().parents[2] / "models" / "crew-v1"
 

@@ -1,4 +1,4 @@
-"""Drift test: web/api/_crew/bundle must be byte-identical to models/crew-v1.
+"""Drift test: service/crew/bundle must be byte-identical to models/crew-v1.
 
 Only pipelines/export_model_bundle.py writes either copy. If this fails, someone regenerated or edited
 one copy: run `python pipelines/export_model_bundle.py --mirror-only --force` (or re-export both).
@@ -7,7 +7,7 @@ import hashlib
 import pathlib
 
 import pytest
-from _crew.bundle import DEFAULT_BUNDLE_DIR, load_bundle
+from crew.bundle import DEFAULT_BUNDLE_DIR, load_bundle
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "models" / "crew-v1"

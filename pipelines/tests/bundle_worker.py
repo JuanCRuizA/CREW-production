@@ -1,4 +1,4 @@
-"""Run the deployed scoring package (web/api/_crew) with sklearn, pandas and shap blocked.
+"""Run the deployed scoring package (service/crew) with sklearn, pandas and shap blocked.
 
 The parity test calls this in a subprocess: it proves the code that ships needs none of those
 libraries, and it holds no scoring logic of its own, so what is tested is what is deployed.
@@ -12,12 +12,12 @@ from pathlib import Path
 BLOCKED = ("sklearn", "pandas", "shap")
 for _name in BLOCKED:
     sys.modules[_name] = None  # any `import sklearn` now raises ImportError
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "web" / "api"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "service"))
 
 import numpy as np  # noqa: E402
 import xgboost as xgb  # noqa: E402
-from _crew.bundle import load_bundle  # noqa: E402
-from _crew.scoring import RecordError, encode_record, predict_row, score_record  # noqa: E402
+from crew.bundle import load_bundle  # noqa: E402
+from crew.scoring import RecordError, encode_record, predict_row, score_record  # noqa: E402
 
 
 def main(bundle_dir: str, records_path: str, results_path: str) -> None:

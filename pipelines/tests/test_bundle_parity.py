@@ -5,7 +5,7 @@ NaN -> 0, XGBClassifier.predict_proba, np.interp over the calibrator points and
 shap.TreeExplainer. Same rules as scripts/score_local.py (variant "fillna_MISSING"), except
 that an unseen label raises (LabelEncoder.transform) instead of becoming 0.
 
-Bundle path: the deployed package web/api/_crew with its mirrored bundle, run by tests/bundle_worker.py in a
+Bundle path: the deployed package service/crew with its mirrored bundle, run by tests/bundle_worker.py in a
 subprocess that blocks sklearn, pandas and shap. The worker holds no scoring logic of its own.
 
 Clients come from the legacy SQLite snapshot opened with mode=ro (loan_predictions is not used).
@@ -27,7 +27,7 @@ import shap
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 MODEL_DIR = ROOT / "models" / "legacy"
 BUNDLE_DIR = ROOT / "models" / "crew-v1"
-DEPLOYED_BUNDLE = ROOT / "web" / "api" / "_crew" / "bundle"  # byte-identical mirror, see test_bundle_mirror.py
+DEPLOYED_BUNDLE = ROOT / "service" / "crew" / "bundle"  # byte-identical mirror, see test_bundle_mirror.py
 DB_PATH = ROOT / "data" / "legacy" / "portfolio_surveillance.db"
 WORKER = pathlib.Path(__file__).with_name("bundle_worker.py")
 
