@@ -1,0 +1,63 @@
+# CI for the simple-deploy path. No secrets: nothing here touches Supabase or Render.
+#
+# What CI can and cannot check:
+# - models/legacy (.pkl) and data/legacy (SQLite) are git-ignored, so the bundle parity test
+#   (pipelines/tests/test_bundle_parity.py) is collected but SKIPPED by its own skipif. Parity
+#   (tolerance 1e-6) is a local check: run `pytest` on a machine that has those files.
+# - Tests that need a live database must skip explicitly when DATABASE_URL is not set.
+name: ci
+
+on:
+  push:
+    branches: [dev, simple-deploy, "simple/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    # Full test suite. The parity test and the mirror test import the exporter stack at module
+    # level (joblib, pandas, shap, scikit-learn), so this job installs pipelines/requirements.txt.
+    # That file brings `xgboost`; `xgboost-cpu` is the same library in another package and both
+    # install the same `xgboost` module, so it is filtered out of the service requirements here.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r pipelines/requirements.txt
+          grep -v '^xgboost-cpu' service/requirements.txt > /tmp/service-no-xgb.txt
+          pip install -r /tmp/service-no-xgb.txt
+      - name: Run tests
+        run: pytest -rs   # -rs prints the reason of every skipped test, so skips are never silent
+
+  service-install:
+    # Installs exactly what Render installs, and proves the deployed package scores without
+    # scikit-learn, pandas or shap and loads the committed model bundle.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install service requirements only
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r service/requirements.txt
+      - name: Heavy libraries are absent
+        run: |
+          python - <<'EOF'
+          import importlib.util
+          present = [m for m in ("sklearn", "pandas", "shap") if importlib.util.find_spec(m)]
+          assert not present, f"service requirements pull in {present}"
+          EOF
+      - name: Bundle loads from the service package
+        working-directory: service
+        run: python -c "from crew.bundle import load_bundle; b = load_bundle(); print(b.model_version, b.sha256)"

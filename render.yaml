@@ -1,0 +1,24 @@
+# Render Blueprint for the simple-deploy path: one Flask web service (scoring API + Jinja UI).
+# Reference: https://render.com/docs/blueprint-spec
+# Secrets are never written here: `sync: false` makes Render ask for the value when the Blueprint
+# is first created, and later Blueprint syncs leave it untouched.
+services:
+  - type: web
+    name: crew-simple
+    runtime: python
+    plan: free
+    region: oregon            # same AWS region as the Supabase project (us-west-2): low DB latency
+    branch: simple-deploy
+    autoDeploy: true          # every push to simple-deploy redeploys
+    # No rootDir and no buildFilter: the service reads service/crew/bundle, and any change in the
+    # repo (model bundle included) must trigger a redeploy.
+    buildCommand: pip install -r service/requirements.txt
+    startCommand: gunicorn --chdir service --workers 2 --threads 2 --timeout 60 --bind 0.0.0.0:$PORT "app:create_app()"
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION   # takes precedence over .python-version; Render needs the full x.y.z
+        value: 3.12.12
+      - key: DATABASE_URL     # Supabase session pooler URI for the crew_app role (see docs/DEPLOY_SIMPLE.md)
+        sync: false
+      - key: FLASK_SECRET_KEY # random 256-bit value generated once by Render
+        generateValue: true
