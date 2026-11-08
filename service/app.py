@@ -10,6 +10,7 @@ import sys
 from flask import Flask
 
 import api
+import views
 from crew.bundle import BundleError, load_bundle
 
 try:
@@ -39,6 +40,6 @@ def create_app(config: dict | None = None) -> Flask:
     app.extensions["crew_bundle_error"] = bundle_error
 
     app.register_blueprint(api.bp)
-    # --- UI blueprint (owned by the ui agent): register it here, right after the API ---
+    app.register_blueprint(views.bp)  # HTML pages: /, /clients/<id>, static at /static/views
 
     return app
