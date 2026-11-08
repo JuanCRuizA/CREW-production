@@ -20,6 +20,7 @@ BASE_DIR = pathlib.Path(__file__).resolve().parents[1]
 MODEL_DIR = BASE_DIR / "models" / "legacy"
 BUNDLE_VERSION = "crew-v1"
 BUNDLE_DIR = BASE_DIR / "models" / BUNDLE_VERSION
+MIRROR_DIR = BASE_DIR / "web" / "api" / "_crew" / "bundle"  # byte-identical copy that ships with the Vercel function
 
 N_FEATURES = 216
 N_CATEGORICAL = 16
@@ -91,7 +92,9 @@ def validate(art: dict) -> None:
 
 def write_json(path: pathlib.Path, obj: dict) -> None:
     """allow_nan=False: a stray NaN/inf must fail the export, not leak into the bundle."""
-    path.write_text(json.dumps(obj, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8")
+    text = json.dumps(obj, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    with path.open("w", encoding="utf-8", newline="\n") as handle:  # newline="\n": Windows must not write CRLF into the bundle
+        handle.write(text)
 
 
 def build_preprocessing(art: dict) -> dict:
@@ -165,22 +168,43 @@ def export_bundle(art: dict, out_dir: pathlib.Path = BUNDLE_DIR, force: bool = F
     write_json(out_dir / "preprocessing.json", build_preprocessing(art))
     write_json(out_dir / "calibration.json", build_calibration(art))
     write_json(out_dir / "thresholds.json", build_thresholds(art))
-    shutil.copyfile(art["model_card_path"], out_dir / "model_card.json")  # byte-for-byte, unedited
+    # The legacy model card may have CRLF (written on Windows). Only the line endings are normalised to LF, so the
+    # bundle has LF in every file (see .gitattributes); the content is otherwise unedited.
+    card = pathlib.Path(art["model_card_path"]).read_bytes().replace(b"\r\n", b"\n")
+    (out_dir / "model_card.json").write_bytes(card)
 
     return {f.name: f.stat().st_size / 1e6 for f in sorted(out_dir.iterdir())}
 
 
+def mirror_bundle(src: pathlib.Path = BUNDLE_DIR, dst: pathlib.Path = MIRROR_DIR, force: bool = False) -> list[str]:
+    """Copy the bundle files byte for byte to dst (the copy the Vercel function reads)."""
+    if dst.exists() and any(dst.iterdir()):
+        if not force:
+            raise FileExistsError(f"{dst} already has files; pass --force to overwrite")
+        shutil.rmtree(dst)
+    dst.mkdir(parents=True, exist_ok=True)
+    names = sorted(f.name for f in src.iterdir() if f.is_file())
+    for name in names:
+        shutil.copyfile(src / name, dst / name)
+    return names
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    parser.add_argument("--force", action="store_true", help="overwrite an existing bundle")
+    parser.add_argument("--force", action="store_true", help="overwrite an existing bundle and its mirror")
+    parser.add_argument("--mirror-only", action="store_true", help="skip the export and only copy the existing bundle to the mirror")
+    parser.add_argument("--mirror-dir", type=pathlib.Path, default=MIRROR_DIR, help="where the byte-identical copy goes")
     args = parser.parse_args()
 
-    art = load_legacy()
-    validate(art)
-    sizes = export_bundle(art, force=args.force)
-    for name, mb in sizes.items():
-        print(f"{name:<20}{mb:>8.3f} MB")
-    print(f"{'TOTAL':<20}{sum(sizes.values()):>8.3f} MB  ->  {BUNDLE_DIR}")
+    if not args.mirror_only:
+        art = load_legacy()
+        validate(art)
+        sizes = export_bundle(art, force=args.force)
+        for name, mb in sizes.items():
+            print(f"{name:<20}{mb:>8.3f} MB")
+        print(f"{'TOTAL':<20}{sum(sizes.values()):>8.3f} MB  ->  {BUNDLE_DIR}")
+    names = mirror_bundle(BUNDLE_DIR, args.mirror_dir, force=args.force)
+    print(f"mirror: {len(names)} files  ->  {args.mirror_dir}")
 
 
 if __name__ == "__main__":
