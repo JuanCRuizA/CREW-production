@@ -5,7 +5,8 @@ NaN -> 0, XGBClassifier.predict_proba, np.interp over the calibrator points and
 shap.TreeExplainer. Same rules as scripts/score_local.py (variant "fillna_MISSING"), except
 that an unseen label raises (LabelEncoder.transform) instead of becoming 0.
 
-Bundle path: tests/bundle_worker.py in a subprocess that blocks sklearn, pandas and shap.
+Bundle path: the deployed package web/api/_crew with its mirrored bundle, run by tests/bundle_worker.py in a
+subprocess that blocks sklearn, pandas and shap. The worker holds no scoring logic of its own.
 
 Clients come from the legacy SQLite snapshot opened with mode=ro (loan_predictions is not used).
 Run with: python -m pytest pipelines/tests/test_bundle_parity.py -s
@@ -26,6 +27,7 @@ import shap
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 MODEL_DIR = ROOT / "models" / "legacy"
 BUNDLE_DIR = ROOT / "models" / "crew-v1"
+DEPLOYED_BUNDLE = ROOT / "web" / "api" / "_crew" / "bundle"  # byte-identical mirror, see test_bundle_mirror.py
 DB_PATH = ROOT / "data" / "legacy" / "portfolio_surveillance.db"
 WORKER = pathlib.Path(__file__).with_name("bundle_worker.py")
 
@@ -37,8 +39,8 @@ MIN_PER_GROUP = 200
 POOL_WITH_NULLS = 4000
 
 pytestmark = pytest.mark.skipif(
-    not (BUNDLE_DIR / "booster.json").exists() or not DB_PATH.exists(),
-    reason="needs models/crew-v1 (run pipelines/export_model_bundle.py) and data/legacy/portfolio_surveillance.db",
+    not (BUNDLE_DIR / "booster.json").exists() or not (DEPLOYED_BUNDLE / "booster.json").exists() or not DB_PATH.exists(),
+    reason="needs models/crew-v1, its mirror (pipelines/export_model_bundle.py) and data/legacy/portfolio_surveillance.db",
 )
 
 
@@ -84,7 +86,15 @@ def reference_score(df: pd.DataFrame, legacy: dict) -> dict:
         "pd_cal_sklearn": cal.predict(pd_raw),
         "shap": np.asarray(shap_values),
         "bias": float(np.ravel(legacy["explainer"].expected_value)[0]),
+        "names": legacy["names"],
     }
+
+
+def reference_drivers(shap_row: np.ndarray, names: list) -> tuple:
+    """Top 3 risk-increasing and top 2 risk-decreasing features, same rule as the API (sign filter, stable ties)."""
+    up = [i for i in np.argsort(-shap_row, kind="stable")[:3] if shap_row[i] > 0]
+    down = [i for i in np.argsort(shap_row, kind="stable")[:2] if shap_row[i] < 0]
+    return [(names[i], float(shap_row[i])) for i in up], [(names[i], float(shap_row[i])) for i in down]
 
 
 # ---------------------------------------------------------------- bundle path
@@ -99,7 +109,7 @@ def run_bundle(records: list[dict]) -> dict:
         tmp = pathlib.Path(tmp)
         (tmp / "records.json").write_text(json.dumps(records, default=_json_default), encoding="utf-8")
         proc = subprocess.run(
-            [sys.executable, "-I", str(WORKER), str(BUNDLE_DIR), str(tmp / "records.json"), str(tmp / "results.json")],
+            [sys.executable, "-I", str(WORKER), str(DEPLOYED_BUNDLE), str(tmp / "records.json"), str(tmp / "results.json")],
             capture_output=True,
             text=True,
         )
@@ -118,14 +128,24 @@ def compare(out: dict, ref: dict) -> dict:
     errors = [r["error"] for r in results if "error" in r]
     assert not errors, f"bundle rejected valid records, first error: {errors[0]}"
     contribs = np.array([r["contribs"] for r in results])
+    pd_cal = np.array([r["pd_calibrated"] for r in results])
+    margins = np.array([r["explanation"]["margin"] for r in results])
+    drivers = 0.0
+    for k, result in enumerate(results):
+        expected = reference_drivers(ref["shap"][k], ref["names"])
+        for key, wanted in zip(("increasing_risk", "decreasing_risk"), expected):
+            got = result["explanation"][key]
+            assert [d["feature"] for d in got] == [name for name, _ in wanted], f"record {k}: {key} features or order differ"
+            drivers = max([drivers] + [abs(d["shap"] - value) for d, (_, value) in zip(got, wanted)])
     return {
         "n": len(results),
         "pd_raw": np.abs(np.array([r["pd_raw"] for r in results]) - ref["pd_raw"]).max(),
-        "pd_cal": np.abs(np.array([r["pd_cal"] for r in results]) - ref["pd_cal"]).max(),
-        "pd_cal_vs_sklearn": np.abs(np.array([r["pd_cal"] for r in results]) - ref["pd_cal_sklearn"]).max(),
+        "pd_cal": np.abs(pd_cal - ref["pd_cal"]).max(),
+        "pd_cal_vs_sklearn": np.abs(pd_cal - ref["pd_cal_sklearn"]).max(),
         "shap": np.abs(contribs[:, :-1] - ref["shap"]).max(),
         "bias": np.abs(contribs[:, -1] - ref["bias"]).max(),
-        "margin_sum": np.abs(contribs.sum(axis=1) - np.array([r["margin"] for r in results])).max(),
+        "drivers": drivers,
+        "margin_sum": np.abs(contribs.sum(axis=1) - margins).max(),
     }
 
 
@@ -179,17 +199,17 @@ EDGE_OK = {
     "null OCCUPATION_TYPE (has MISSING)": {"OCCUPATION_TYPE": None},
     "inf + NaN + null combined": {"DEBT_TO_INCOME": INF, "INCOME_TO_CREDIT": -INF, "EXT_SOURCE_MEAN": None, "HOUSETYPE_MODE": None},
 }
-EDGE_REJECTED = {
-    "unknown category OCCUPATION_TYPE": {"OCCUPATION_TYPE": "Astronaut"},
-    "unknown category CODE_GENDER": {"CODE_GENDER": "Z"},
-    "null NAME_INCOME_TYPE (no MISSING class)": {"NAME_INCOME_TYPE": None},
+EDGE_REJECTED = {  # case: (patch, problem code the deployed package must report)
+    "unknown category OCCUPATION_TYPE": ({"OCCUPATION_TYPE": "Astronaut"}, "unknown_category"),
+    "unknown category CODE_GENDER": ({"CODE_GENDER": "Z"}, "unknown_category"),
+    "null NAME_INCOME_TYPE (no MISSING class)": ({"NAME_INCOME_TYPE": None}, "null_not_allowed"),
 }
 
 
 @pytest.fixture(scope="module")
 def edge_base(clients, legacy):
     base = to_records(clients["sin nulos"].iloc[[len(clients["sin nulos"]) // 2]])[0]
-    touched = {k for case in (*EDGE_OK.values(), *EDGE_REJECTED.values()) for k in case}
+    touched = {k for case in (*EDGE_OK.values(), *(patch for patch, _ in EDGE_REJECTED.values())) for k in case}
     assert touched <= set(legacy["names"]), f"edge cases use unknown features: {touched - set(legacy['names'])}"
     return base
 
@@ -204,7 +224,7 @@ def test_bundle_scoring_imports_no_sklearn_pandas_shap(group_results):
 def test_group_parity(group_results, label):
     d = group_results[label]["diffs"]
     assert d["n"] >= MIN_PER_GROUP
-    for metric in ("pd_raw", "pd_cal", "pd_cal_vs_sklearn", "shap", "bias"):
+    for metric in ("pd_raw", "pd_cal", "pd_cal_vs_sklearn", "shap", "bias", "drivers"):
         assert d[metric] <= TOL, f"{label}: {metric} max abs_diff {d[metric]:.3e} > {TOL}"
     assert d["margin_sum"] <= SUM_TOL, f"{label}: sum(contribs) vs margin {d['margin_sum']:.3e}"
 
@@ -222,22 +242,25 @@ def test_edge_cases_parity(edge_base, legacy):
     out = run_bundle(records)
     ref = reference_score(pd.DataFrame.from_records(records, columns=legacy["names"]), legacy)
     d = compare(out, ref)
-    for metric in ("pd_raw", "pd_cal", "pd_cal_vs_sklearn", "shap", "bias"):
+    for metric in ("pd_raw", "pd_cal", "pd_cal_vs_sklearn", "shap", "bias", "drivers"):
         assert d[metric] <= TOL, f"edge cases: {metric} max abs_diff {d[metric]:.3e} > {TOL}"
 
 
 @pytest.mark.parametrize("case", list(EDGE_REJECTED))
 def test_unknown_or_unmappable_category_is_an_error_in_both_paths(edge_base, legacy, case):
-    record = {**edge_base, **EDGE_REJECTED[case]}
+    patch, code = EDGE_REJECTED[case]
+    record = {**edge_base, **patch}
     with pytest.raises(ValueError):
         reference_matrix(pd.DataFrame.from_records([record], columns=legacy["names"]), legacy)
     result = run_bundle([record])["results"][0]
     assert "error" in result, f"bundle scored a record it should reject: {case}"
+    assert [(p["code"], p["field"]) for p in result["problems"]] == [(code, next(iter(patch)))]
 
 
 def test_missing_feature_key_is_an_error(edge_base):
     record = {k: v for k, v in edge_base.items() if k != "EXT_SOURCE_MEAN"}
-    assert "missing feature: EXT_SOURCE_MEAN" in run_bundle([record])["results"][0]["error"]
+    result = run_bundle([record])["results"][0]
+    assert [(p["code"], p["field"]) for p in result["problems"]] == [("missing_feature", "EXT_SOURCE_MEAN")]
 
 
 def test_calibrator_json_matches_sklearn_and_clips(legacy):
@@ -262,19 +285,20 @@ def test_bundle_files_carry_the_legacy_contract(legacy):
     assert pre["categorical_modes"]["values"] == legacy["modes"]
     assert cal["x_thresholds"] == [float(v) for v in legacy["calibrator"].X_thresholds_] and cal["n_points"] == 236
     assert thr["scale"] == "raw" and thr["thresholds"] == {k: float(v) for k, v in legacy["thresholds"].items()}
-    assert (BUNDLE_DIR / "model_card.json").read_bytes() == (MODEL_DIR / "model_card.json").read_bytes()
+    # the exporter only normalises CRLF to LF when copying the legacy card; nothing else may differ
+    assert (BUNDLE_DIR / "model_card.json").read_bytes() == (MODEL_DIR / "model_card.json").read_bytes().replace(b"\r\n", b"\n")
 
 
 def test_report(group_results, capsys):
     sizes = {p.name: p.stat().st_size / 1e6 for p in sorted(BUNDLE_DIR.iterdir())}
     with capsys.disabled():
         print("\n\nmax abs_diff, bundle vs .pkl pipeline (tolerance 1e-6)")
-        print(f"{'grupo':<11}{'n':>5}{'pd_raw':>11}{'pd_cal':>11}{'cal_sklearn':>13}{'shap':>11}{'bias':>11}{'sum~margin':>12}")
+        print(f"{'grupo':<11}{'n':>5}{'pd_raw':>11}{'pd_cal':>11}{'cal_sklearn':>13}{'shap':>11}{'bias':>11}{'drivers':>11}{'sum~margin':>12}")
         for label, res in group_results.items():
             d = res["diffs"]
             print(
                 f"{label:<11}{d['n']:>5}{d['pd_raw']:>11.2e}{d['pd_cal']:>11.2e}{d['pd_cal_vs_sklearn']:>13.2e}"
-                f"{d['shap']:>11.2e}{d['bias']:>11.2e}{d['margin_sum']:>12.2e}"
+                f"{d['shap']:>11.2e}{d['bias']:>11.2e}{d['drivers']:>11.2e}{d['margin_sum']:>12.2e}"
             )
         meta = next(iter(group_results.values()))["meta"]
         print(f"worker: xgboost {meta['xgboost']}, numpy {meta['numpy']}, forbidden modules loaded: {meta['forbidden_loaded']}, "
