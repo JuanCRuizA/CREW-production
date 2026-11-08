@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CREW{% endblock %} | CREW</title>
+  <link rel="stylesheet" href="{{ url_for('views.static', filename='style.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="{{ url_for('views.clients') }}">CREW</a>
+    <span class="tagline">Credit Risk Early Warning</span>
+  </header>
+  <div class="banner" role="note">
+    crew-v1 is a portfolio demo on a public Kaggle sample. pd_calibrated under-estimates under the crew-v1
+    NaN policy; pd_raw is not a probability. Not for credit decisions.
+  </div>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">Model: <code>{{ footer_model_version }}</code></footer>
+</body>
+</html>

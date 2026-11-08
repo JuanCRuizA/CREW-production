@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Client {{ client.sk_id_curr }}{% endblock %}
+{% macro drivers_table(caption, drivers) %}
+<div class="table-wrap">
+  <table>
+    <caption>{{ caption }}</caption>
+    <thead>
+      <tr><th scope="col">Feature</th><th scope="col" class="num">Value</th><th scope="col" class="num">SHAP (log-odds)</th></tr>
+    </thead>
+    <tbody>
+      {% for d in drivers %}
+      <tr><td><code>{{ d.feature }}</code></td><td class="num">{{ d.value }}</td><td class="num">{{ "%+.4f"|format(d.shap) }}</td></tr>
+      {% else %}
+      <tr><td colspan="3" class="muted">None.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+{% block content %}
+<p><a href="{{ url_for('views.clients') }}">Back to clients</a></p>
+<h1>Client {{ client.sk_id_curr }}</h1>
+<dl class="facts">
+  <dt>TARGET</dt><dd>{{ client.target }}</dd>
+  <dt>Loaded at</dt><dd>{{ client.loaded_at }}</dd>
+</dl>
+
+<form method="post" action="{{ url_for('views.rescore', sk_id_curr=client.sk_id_curr) }}">
+  <button type="submit">Re-score</button>
+</form>
+
+{% if score is none %}
+<p class="muted">This client has not been scored yet.</p>
+{% else %}
+<h2>Latest score</h2>
+<dl class="facts">
+  <dt>pd_raw</dt><dd>{{ "%.4f"|format(score.pd_raw) }}</dd>
+  <dt>pd_calibrated</dt><dd>{{ "%.4f"|format(score.pd_calibrated) }}</dd>
+  <dt>Thresholds ({{ score.thresholds.scale }} scale)</dt>
+  <dd>statistical {{ "%.4f"|format(score.thresholds.statistical_optimal) }}, business {{ "%.4f"|format(score.thresholds.business_optimal) }}</dd>
+  <dt>Flags</dt>
+  <dd>
+    {% if score.flags.above_statistical %}<span class="badge badge-stat">above statistical</span>{% endif %}
+    {% if score.flags.above_business %}<span class="badge badge-biz">above business</span>{% endif %}
+    {% if not score.flags.above_statistical and not score.flags.above_business %}<span class="muted">below both thresholds</span>{% endif %}
+  </dd>
+  <dt>Model</dt><dd><code>{{ score.model_version }}</code> <span class="muted">sha256 {{ score.bundle_sha256[:12] }}</span></dd>
+  <dt>Scored at</dt><dd>{{ score.scored_at }}</dd>
+</dl>
+
+<h2>Top drivers</h2>
+<p class="muted">SHAP values explain the raw margin (log-odds, bias {{ "%+.4f"|format(score.explanation.shap_bias) }},
+margin {{ "%+.4f"|format(score.explanation.margin) }}), not pd_calibrated.</p>
+{{ drivers_table("Increasing risk", score.explanation.increasing_risk) }}
+{{ drivers_table("Decreasing risk", score.explanation.decreasing_risk) }}
+{% endif %}
+{% endblock %}
