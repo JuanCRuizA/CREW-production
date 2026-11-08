@@ -41,7 +41,7 @@ Two database identities, never mixed:
 ### A4. Apply the schema migration
 - **What:** `supabase db push --dry-run` (lists the migrations it would run: expect `0001_crew_schema.sql`), then `supabase db push`.
   - **Alternative:** Dashboard -> SQL Editor -> paste the full content of `supabase/migrations/0001_crew_schema.sql` -> Run. Run it once only.
-- **Why:** creates schema `crew` with `clients`, `client_features`, `scores`, `score_audit_log`, enables RLS on all four with no policies, and creates the `crew_app` role with minimal grants.
+- **Why:** creates schema `crew` with `clients`, `client_features`, `scores`, `score_audit_log`, enables RLS on all four with policies only for `crew_app` (none for `anon` or `authenticated`), and creates the `crew_app` role with minimal grants.
 - **If skipped:** the loader and the service fail with `schema "crew" does not exist`.
 - **Note:** if `supabase` asks to initialise a `supabase/config.toml`, answer yes only for local files; it does not change the remote project.
 
@@ -56,7 +56,7 @@ Two database identities, never mixed:
 
 ### A6. Keep the `crew` schema out of the Data API
 - **What:** Project Settings -> Data API (API settings) -> *Exposed schemas*: make sure `crew` is **not** listed (leave the defaults, `public` and `graphql_public`).
-- **Why:** this path talks to Postgres directly from Flask; nothing should be reachable through PostgREST with the public anon key. RLS without policies already denies access; this is a second layer (defence in depth).
+- **Why:** this path talks to Postgres directly from Flask; nothing should be reachable through PostgREST with the public anon key. RLS has no policies for `anon` or `authenticated`, so it already denies them access; this is a second layer (defence in depth).
 - **If skipped:** no data leak while RLS stays on, but one mistaken policy later would expose client data through the public REST endpoint.
 
 ### A7. Build the two session pooler connection strings
@@ -158,7 +158,7 @@ curl -s -X POST https://<host>/api/clients/<sk_id_curr>/score
 
 - [ ] No real secret in git: `.env` is ignored; only `.env.example` with placeholders is committed. Before each push, read `git diff origin/simple-deploy..HEAD` and look for anything that resembles a password or a full connection string.
 - [ ] Render holds only `DATABASE_URL` (crew_app) and the generated `FLASK_SECRET_KEY`.
-- [ ] `crew_app`: `LOGIN`, no `BYPASSRLS`, no `CREATEROLE`, only the grants in the migration (select clients/features, insert scores/audit).
+- [ ] `crew_app`: `LOGIN`, no `BYPASSRLS`, no `CREATEROLE`, only the grants in the migration (select on all four tables, insert on scores and score_audit_log, no update or delete).
 - [ ] RLS enabled on every `crew` table; `crew` not exposed in the Data API.
 - [ ] The Supabase `service_role` key is not used anywhere on this path.
 - [ ] Passwords rotated if they ever appeared in a terminal history, screenshot or chat (`alter role crew_app with password ...`, then update Render).
