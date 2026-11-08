@@ -1,4 +1,4 @@
-"""Unit tests for _crew.scoring: client-data problems are RecordError (422), results do not depend on key order.
+"""Unit tests for crew.scoring: client-data problems are RecordError (422), results do not depend on key order.
 
 The valid record is built from the bundle itself (first class of each categorical, 0.0 elsewhere), so these
 tests need neither the legacy pickles nor the SQLite snapshot. Parity against the .pkl pipeline lives in
@@ -9,8 +9,8 @@ import pathlib
 import random
 
 import pytest
-from _crew.bundle import BundleError, load_bundle
-from _crew.scoring import MAX_PROBLEMS, RecordError, score_record
+from crew.bundle import BundleError, load_bundle
+from crew.scoring import MAX_PROBLEMS, RecordError, score_record
 
 SOURCE = pathlib.Path(__file__).resolve().parents[2] / "models" / "crew-v1"
 
@@ -88,7 +88,7 @@ def test_drivers_echo_the_value_as_received(bundle, features):
 
 
 def test_non_finite_values_are_echoed_as_json_safe_text():
-    from _crew.scoring import _echo
+    from crew.scoring import _echo
 
     assert _echo(math.inf) == "Infinity" and _echo(-math.inf) == "-Infinity"
     assert _echo(math.nan) is None and _echo("Infinity") == "Infinity" and _echo(0.25) == 0.25

@@ -20,7 +20,7 @@ BASE_DIR = pathlib.Path(__file__).resolve().parents[1]
 MODEL_DIR = BASE_DIR / "models" / "legacy"
 BUNDLE_VERSION = "crew-v1"
 BUNDLE_DIR = BASE_DIR / "models" / BUNDLE_VERSION
-MIRROR_DIR = BASE_DIR / "web" / "api" / "_crew" / "bundle"  # byte-identical copy that ships with the Vercel function
+MIRROR_DIR = BASE_DIR / "service" / "crew" / "bundle"  # byte-identical copy that ships with the Flask service
 
 N_FEATURES = 216
 N_CATEGORICAL = 16
@@ -177,7 +177,7 @@ def export_bundle(art: dict, out_dir: pathlib.Path = BUNDLE_DIR, force: bool = F
 
 
 def mirror_bundle(src: pathlib.Path = BUNDLE_DIR, dst: pathlib.Path = MIRROR_DIR, force: bool = False) -> list[str]:
-    """Copy the bundle files byte for byte to dst (the copy the Vercel function reads)."""
+    """Copy the bundle files byte for byte to dst (the copy the Flask service reads)."""
     if dst.exists() and any(dst.iterdir()):
         if not force:
             raise FileExistsError(f"{dst} already has files; pass --force to overwrite")
