@@ -18,12 +18,12 @@ jobs:
   test:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version-file: web/.python-version
-      - name: Install the scoring dependencies
-        run: pip install -r web/requirements.txt pytest==9.0.2
+      - name: Install the scoring dependencies (plus the exporter's, for the bundle mirror test)
+        run: pip install -r web/requirements.txt pytest==9.0.2 scikit-learn==1.8.0 pandas==2.3.3
       - name: Run the tests (the legacy .pkl parity test needs files that are not in git)
         run: python -m pytest -q --ignore=pipelines/tests/test_bundle_parity.py
 
