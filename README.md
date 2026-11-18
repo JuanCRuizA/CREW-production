@@ -46,6 +46,6 @@ Tests: `python -m pytest -q --ignore=pipelines/tests/test_bundle_parity.py` (the
 - Known limitation: under the crew-v1 NaN policy the calibrated PD under-estimates (see [docs/HALLAZGO_NAN_CALIBRACION.md](docs/HALLAZGO_NAN_CALIBRACION.md)).
 - Next: PSI drift monitoring, Postgres on the same VM, and a web view.
 
-The original plan targeted Vercel and Supabase; in November 2026 the deployment moved to a single Oracle Cloud VM. The [migration plan (in Spanish)](docs/PLAN_MIGRACION.md) is being updated to reflect this.
+The original plan targeted Vercel and Supabase; in November 2026 the deployment moved to a single Oracle Cloud VM. The [migration plan (in Spanish)](docs/Plan_Migracion_v3.md)  reflect this.
 
 The research project (EDA, feature engineering, model training, SHAP, agent notebooks, and the original Streamlit dashboard) lives in [JuanCRuizA/credit-risk-early-warning-system](https://github.com/JuanCRuizA/credit-risk-early-warning-system).
