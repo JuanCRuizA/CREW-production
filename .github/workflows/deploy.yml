@@ -1,10 +1,13 @@
 # CI/CD for CREW-production: every push to dev runs the tests on ARM (same architecture as the Oracle VM)
 # and, only if they pass, deploys to Oracle Cloud and checks that the live API answers.
+# Pull requests to main run only the tests: that is the check the main branch protection requires.
 name: test-and-deploy
 
 on:
   push:
     branches: [dev]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -29,6 +32,7 @@ jobs:
 
   deploy:
     needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Configure SSH
