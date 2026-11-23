@@ -133,7 +133,7 @@ Cambios frente a la v2.1:
 - [x] Paridad en producción: el mismo registro de prueba da el mismo `pd_raw` (0.3361572027206421) en local y en la VM
 - [x] CI/CD: 85 tests en ARM, deploy por SSH y smoke test (`.github/workflows/deploy.yml`)
 - [x] README con la arquitectura real
-- [ ] Medir latencia en caliente (p50 y p95 de 100 llamadas) y registrarla en el README
+- [x] Medir latencia en caliente: p50 42 ms, p95 43 ms (23 nov 2026, medida desde la VM)
 - [ ] PR de `dev` a `main` con el check de CI exigido en la protección de `main`, y tag `v0.5-api-oracle`
 
 ### Fase 1: Postgres, esquema y datos (6 a 10 h)
