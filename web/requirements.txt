@@ -1,4 +1,5 @@
-# versions will be defined on phase 0.5 after the Vercel test
-xgboost-cpu
-numpy
-supabase
+# Same xgboost version that exported models/crew-v1 (pipelines/requirements.txt).
+# scipy arrives as a dependency of xgboost-cpu; do not remove it.
+# supabase is added in Phase 2, when the function starts reading from the database.
+xgboost-cpu==3.1.2
+numpy==2.3.5

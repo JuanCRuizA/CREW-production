@@ -1,0 +1,52 @@
+# CI/CD for CREW-production: every push to dev runs the tests on ARM (same architecture as the Oracle VM)
+# and, only if they pass, deploys to Oracle Cloud and checks that the live API answers.
+# Pull requests to main run only the tests: that is the check the main branch protection requires.
+name: test-and-deploy
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-oracle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: web/.python-version
+      - name: Install the scoring dependencies (plus the exporter's, for the bundle mirror test)
+        run: pip install -r web/requirements.txt pytest==9.0.2 scikit-learn==1.8.0 pandas==2.3.3
+      - name: Run the tests (the legacy .pkl parity test needs files that are not in git)
+        run: python -m pytest -q --ignore=pipelines/tests/test_bundle_parity.py
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Deploy to Oracle Cloud
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "cd ~/CREW-production && git fetch origin dev && git reset --hard origin/dev && docker compose up -d --build"
+      - name: Smoke test the live API
+        run: |
+          sleep 15
+          curl -fsS https://129-38-95-215.sslip.io/api/score | grep -q '"model_version": "crew-v1"'
+          echo "Live API answers with crew-v1"
