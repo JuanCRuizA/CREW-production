@@ -1,24 +1,25 @@
 # CREW-production: Claude Code Persistent Context
 
 ## Project Overview
-Production deployment of **CREW** (Credit Risk Early Warning system), the XGBoost credit-risk model built on the Kaggle Home Credit dataset. Goal: see a full production flow working (GitHub → Vercel → Supabase) with a small data sample, built with real-bank practices, as a learning exercise and a banking data science portfolio piece (target roles: UK, US, Switzerland).
+Production deployment of **CREW** (Credit Risk Early Warning system), the XGBoost credit-risk model built on the Kaggle Home Credit dataset. Goal: see a full production flow working (GitHub → GitHub Actions → Oracle Cloud VM) with a small data sample, built with real-bank practices, as a learning exercise and a banking data science portfolio piece (target roles: UK, US, Switzerland).
 
 - **This repo**: `https://github.com/JuanCRuizA/CREW-production.git`
 - **Research project (do NOT modify)**: https://github.com/JuanCRuizA/credit-risk-early-warning-system. It holds NB01 to NB05, the Streamlit app and the full history. Only the strictly necessary files were copied here.
 
 ## Authoritative plan
-**`docs/PLAN_MIGRACION.md`** (Spanish): decisions, architecture, schema, security, phases, rollback. Read it before proposing architecture changes. The decisions in its section 1 were explicitly chosen by the user; don't re-litigate them without a strong reason.
+**`docs/Plan_Migracion_v3.md`** (Spanish): decisions, open decisions, architecture, schema, security, phases, rollback. Read it before proposing architecture changes. The decisions in its section 1 were explicitly chosen by the user; don't re-litigate them without a strong reason. Its section 2 lists the open decisions: ask the user, never decide them silently. Vercel and Supabase were dropped in November 2026 (plan v3).
 
 Architecture summary:
-- Next.js (TypeScript, App Router) on Vercel, Root Directory `web/`
-- Scoring as **Vercel Python functions** in `web/api/`, kept lean: `xgboost-cpu` + `numpy` (`scipy` arrives as an xgboost dependency; do not remove it), SHAP via `pred_contribs=True` (no `shap`, `sklearn` or `pandas`), model loaded from a portable JSON bundle. Render/FastAPI is plan B only if the Phase 0.5 spike fails.
-- Supabase free tier: medallion `bronze` → `silver` → `gold` over the original Kaggle relational model (SK_ID_CURR / SK_ID_BUREAU / SK_ID_PREV), plus `ml`, `ops` and `app` schemas. Only the `api` schema (views) is exposed through PostgREST.
-- Sample first (~2,000 clients stratified by TARGET, fixed seed), then build the layers.
-- Surveillance agent (from NB05), manual retraining and PSI monitoring run on **GitHub Actions** (`workflow_dispatch`). Retraining is never automatic: new models enter as `candidate`, and promotion to `active` is manual (SR 11-7).
-- Access: public read-only simple view (no agent) + invite-only advanced view (admin assigns email/user; public sign-up disabled). The agent is only available in the advanced view, with a quota.
+- One VM on Oracle Cloud Infrastructure (Ubuntu 24.04, Ampere ARM, 2 OCPU, 12 GB, Bogota region), with Docker + Docker Compose. All four portfolio projects (CREW, SAFE, PRISM, CLASS) will run on this VM, one folder and compose file each.
+- Caddy is the only service exposed to the internet (ports 80/443, automatic HTTPS from Let's Encrypt). Today it lives in this repo's `docker-compose.yml`; it moves to a shared edge folder in Phase 6.
+- Scoring API in `web/api/` (`score.py` + `_crew/`), served by `deploy/serve.py` in a container visible only on the Docker network. Kept lean: `xgboost-cpu` + `numpy` (`scipy` arrives as an xgboost dependency; do not remove it), SHAP via `pred_contribs=True` (no `shap`, `sklearn` or `pandas`), model loaded from the portable JSON bundle. Live at `https://129-38-95-215.sslip.io/api/score`.
+- Postgres (Phase 1) runs as a container on the same VM, never published to the internet. Medallion `bronze` → `silver` → `gold` over the original Kaggle relational model (SK_ID_CURR / SK_ID_BUREAU / SK_ID_PREV), plus `ml`, `ops` and `app` schemas. Least-privilege roles (migrator, pipeline writer, read-only API); no superuser in daily operation. The browser never talks to Postgres: the backend applies permissions.
+- Sample first (~2,000 clients stratified by TARGET, fixed seed), then build the layers; the size is a parameter, scaled up later.
+- Surveillance agent (from NB05), manual retraining and PSI monitoring run as jobs on the VM (`docker compose run`), triggered manually or from GitHub Actions over SSH. Retraining is never automatic: new models enter as `candidate`, and promotion to `active` is manual (SR 11-7).
+- Access: public read-only simple view (no agent) + invite-only advanced view (public sign-up disabled). The agent is only available in the advanced view, with a quota.
 
 ## Repository layout
-`web/` (Vercel) · `pipelines/` (heavy Python jobs; `pipelines/tests/` has the bundle parity test) · `supabase/migrations/` (all schema changes, versioned; never edit the schema by hand in the dashboard) · `tests/` · `.github/workflows/` · `reference/` (read-only copies: original `app.py` as `streamlit_app.py`, NB02/NB03/NB05, agent output JSON schemas) · `models/legacy/` (git-ignored `.pkl` artifacts, source for the JSON bundle) · `models/crew-v1/` (committed JSON bundle read by the API; generated by `pipelines/export_model_bundle.py`) · `data/` (git-ignored: `raw/` Kaggle CSVs, `legacy/` SQLite snapshot, `sample/`)
+`web/api/` (scoring API) · `deploy/` (`serve.py`, `Caddyfile`, `make_sample.py`) · `Dockerfile` · `docker-compose.yml` · `pipelines/` (heavy Python jobs; `pipelines/tests/` has the bundle parity test) · `db/migrations/` (Phase 1: all Postgres schema changes, versioned SQL; never change the schema by hand) · `tests/` · `.github/workflows/` (`deploy.yml`: CI/CD) · `reference/` (read-only copies: original `app.py` as `streamlit_app.py`, NB02/NB03/NB05, agent output JSON schemas) · `models/legacy/` (git-ignored `.pkl` artifacts, source for the JSON bundle) · `models/crew-v1/` (committed JSON bundle read by the API; generated by `pipelines/export_model_bundle.py`) · `data/` (git-ignored: `raw/` Kaggle CSVs, `legacy/` SQLite snapshot, `sample/`)
 
 ## Feature Engineering: Banking Ratio Logic (from NB02)
 Correlated raw features (AMT_CREDIT, AMT_ANNUITY, AMT_GOODS_PRICE) are intentionally preserved and used to engineer six banking-standard ratios. Do not suggest removing them for multicollinearity.
@@ -36,7 +37,7 @@ Correlated raw features (AMT_CREDIT, AMT_ANNUITY, AMT_GOODS_PRICE) are intention
 - Git: never work directly on `main`; work on `dev`, and `main` only receives PRs with green CI. Tag `pre-fase-X-YYYYMMDD` before each phase or destructive step.
 - For git/GitHub/infra actions with effects beyond the working tree (push, remotes, branch protection, credentials, history rewrites, cloud resources): explain the step and wait for the user's approval, one decision at a time. The user is learning these tools, so narrate what each step does.
 - The user wants to keep the option to rewrite history later (temporarily disable protection → rewrite → re-enable).
-- Secrets never go in the repo; the `service_role` key and `ANTHROPIC_API_KEY` never reach the browser.
+- Secrets never go in the repo: they live in the VM's `.env` (git-ignored) and in GitHub Actions secrets. The Postgres password and `ANTHROPIC_API_KEY` never reach the browser.
 - Keep outputs agent-ready: structured exports, named dictionaries.
 - Connect technical decisions to banking regulation when relevant: Basel III, BCBS 239, SR 11-7, IFRS 9, GDPR Art. 22, EU AI Act (credit scoring is high-risk, Annex III; Art. 12 logging), FINMA 2017/1 and FINMA 2023/1, Swiss nDSG.
 
@@ -52,6 +53,12 @@ All code, table/column names, comments and portfolio deliverables are in **Engli
 - Read-only: `models/legacy/`, `data/legacy/`, `reference/`. Never read `.env`.
 - Never use em-dashes (code, comments, docs, replies).
 - Be direct and critical: no flattery; disagree when there is a reason.
+
+## Deployment and CI/CD (production is live)
+- Every push to `dev` runs `.github/workflows/deploy.yml`: 85 tests on an ARM runner, then deploy to the VM over SSH (`git reset --hard origin/dev` + `docker compose up -d --build`) and a smoke test of the live API. Pull requests to `main` run only the tests (required check `test`).
+- Consequence: any change to `Dockerfile`, `docker-compose.yml`, `deploy/` or `web/api/` reaches production on the next push. Propose those changes in small steps, test them locally first (Docker Desktop on the user's PC), and say explicitly when a change will affect the live API.
+- Never connect to the production VM, run commands on it, or touch its `.env`. The user operates the VM.
+- Production state: tag `v0.5-api-oracle`. Latency from the VM: p50 42 ms, p95 43 ms (23 Nov 2026).
 
 ## Model bundle invariants (Phase 0.5)
 - Bundle: `models/crew-v1/` is committed and read by the API. Only `pipelines/export_model_bundle.py` generates it (refuses to overwrite without `--force`); never hand-edit it.
