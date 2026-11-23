@@ -125,7 +125,7 @@ Cambios frente a la v2.1:
 - [x] Dependencias separadas: `web/requirements.txt` (ligero) y `pipelines/requirements.txt` (completo)
 - [x] Rama `dev` y `main` protegida
 
-### Fase 0.5: API de scoring en Oracle Cloud (hecha el 15 de noviembre de 2026, salvo lo marcado)
+### Fase 0.5: API de scoring en Oracle Cloud (cerrada el 23 de noviembre de 2026)
 - [x] Bundle JSON con paridad validada contra los `.pkl`
 - [x] `web/api/score.py`: `pd_raw`, `pd_calibrated`, banderas de umbral y top drivers SHAP (sin tier: ver `docs/HALLAZGO_NAN_CALIBRACION.md`)
 - [x] VM en OCI, Docker, puertos 80/443 en dos capas
@@ -134,7 +134,7 @@ Cambios frente a la v2.1:
 - [x] CI/CD: 85 tests en ARM, deploy por SSH y smoke test (`.github/workflows/deploy.yml`)
 - [x] README con la arquitectura real
 - [x] Medir latencia en caliente: p50 42 ms, p95 43 ms (23 nov 2026, medida desde la VM)
-- [ ] PR de `dev` a `main` con el check de CI exigido en la protección de `main`, y tag `v0.5-api-oracle`
+- [x] PR de `dev` a `main` con el check de CI exigido en la protección de `main`, y tag `v0.5-api-oracle`
 
 ### Fase 1: Postgres, esquema y datos (6 a 10 h)
 - [ ] Servicio `postgres` en `docker-compose.yml`, con volumen persistente, contraseña en `.env` y sin puertos publicados
