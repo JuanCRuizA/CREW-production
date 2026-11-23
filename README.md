@@ -28,6 +28,7 @@ curl -X POST https://129-38-95-215.sslip.io/api/score \
 ```
 
 The response contains `pd_raw` (booster output, inflated by `scale_pos_weight`), `pd_calibrated` (isotonic calibration), flags against the statistical (0.5157) and business (0.79) thresholds, and the SHAP drivers that increase and decrease risk. Features are never logged.
+Latency: p50 42 ms, p95 43 ms (100 sequential `POST /api/score` calls made from the VM itself, through Caddy and HTTPS, 23 Nov 2026). It does not include internet travel time from the client.
 
 `deploy/make_sample.py` prints a valid synthetic request built from the bundle.
 
@@ -46,6 +47,6 @@ Tests: `python -m pytest -q --ignore=pipelines/tests/test_bundle_parity.py` (the
 - Known limitation: under the crew-v1 NaN policy the calibrated PD under-estimates (see [docs/HALLAZGO_NAN_CALIBRACION.md](docs/HALLAZGO_NAN_CALIBRACION.md)).
 - Next: PSI drift monitoring, Postgres on the same VM, and a web view.
 
-The original plan targeted Vercel and Supabase; in November 2026 the deployment moved to a single Oracle Cloud VM. The [migration plan (in Spanish)](docs/Plan_Migracion_v3.md)  reflect this.
+The original plan targeted Vercel and Supabase; in November 2026 the deployment moved to a single Oracle Cloud VM. The [migration plan (in Spanish)](docs/Plan_Migracion_v3.md) reflects this.
 
 The research project (EDA, feature engineering, model training, SHAP, agent notebooks, and the original Streamlit dashboard) lives in [JuanCRuizA/credit-risk-early-warning-system](https://github.com/JuanCRuizA/credit-risk-early-warning-system).
